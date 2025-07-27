@@ -1,7 +1,7 @@
 {
   "name": "juet-attendance-backend",
   "version": "1.0.0",
-  "description": "Backend API for JUET Attendance Buddy",
+  "description": "Backend API for JUET Attendance Buddy - Production Ready",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon src/simple-server.ts",
