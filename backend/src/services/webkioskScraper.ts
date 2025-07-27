@@ -1,5 +1,4 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { createWorker } from 'tesseract.js';
 import { logger } from '../utils/logger';
 import { IWebKioskCredentials, ISubject, IExamMark, ISGPACGPAData } from '../types';
 
@@ -45,42 +44,6 @@ export class WebKioskScraper {
     }
   }
 
-  // Solve captcha using OCR
-  private async solveCaptcha(): Promise<string> {
-    try {
-      if (!this.page) throw new Error('Page not initialized');
-
-      // Get captcha image
-      const captchaSelector = 'img[src*="captcha"], img[src*="Captcha"]';
-      await this.page.waitForSelector(captchaSelector, { timeout: 10000 });
-
-      const captchaElement = await this.page.$(captchaSelector);
-      if (!captchaElement) throw new Error('Captcha element not found');
-
-      // Take screenshot of captcha
-      const captchaBuffer = await captchaElement.screenshot();
-
-      // Use Tesseract.js for OCR
-      const worker = await createWorker();
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-      await worker.setParameters({
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-      });
-
-      const { data: { text } } = await worker.recognize(captchaBuffer);
-      await worker.terminate();
-
-      const captchaText = text.replace(/\s/g, '').toUpperCase();
-      logger.info(`Captcha solved: ${captchaText}`);
-
-      return captchaText;
-    } catch (error) {
-      logger.error('Failed to solve captcha:', error);
-      throw error;
-    }
-  }
-
   // Login to WebKiosk
   async login(credentials: IWebKioskCredentials): Promise<boolean> {
     try {
@@ -99,8 +62,12 @@ export class WebKioskScraper {
       await this.page!.type('input[name="Password"]', credentials.password);
       await this.page!.type('input[name="DATE1"]', credentials.dateOfBirth);
 
-      // Get and solve captcha (the captcha text is shown as "mikpq" in the form)
-      const captchaText = await this.page!.$eval('.noselect', el => el.textContent?.replace(/[^a-zA-Z0-9]/g, '') || '');
+      // Get captcha text directly from HTML (it's just styled text, no image OCR needed)
+      const captchaText = await this.page!.$eval('.noselect', el => 
+        el.textContent?.replace(/[^a-zA-Z0-9]/g, '') || ''
+      );
+      
+      logger.info(`Captcha text extracted: ${captchaText}`);
       await this.page!.type('input[name="txtcap"]', captchaText);
 
       // Submit form
