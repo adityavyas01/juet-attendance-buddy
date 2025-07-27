@@ -1,12 +1,37 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.853bda5c2c524eb6958bc6b1e6170650',
-  appName: 'juet-attendance-buddy',
+  appId: 'com.juet.attendancebuddy',
+  appName: 'JUET Attendance Buddy',
   webDir: 'dist',
   server: {
-    url: 'https://853bda5c-2c52-4eb6-958b-c6b1e6170650.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    androidScheme: 'https'
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 3000,
+      launchAutoHide: true,
+      backgroundColor: "#ffffffff",
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: true,
+      androidSpinnerStyle: "large",
+      iosSpinnerStyle: "small",
+      spinnerColor: "#999999",
+      splashFullScreen: true,
+      splashImmersive: true,
+      layoutName: "launch_screen",
+      useDialog: true,
+    },
+    StatusBar: {
+      style: 'default',
+      backgroundColor: '#ffffff'
+    },
+    Keyboard: {
+      resize: 'body',
+      style: 'dark',
+      resizeOnFullScreen: true
+    }
   }
 };
 

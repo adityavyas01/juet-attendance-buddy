@@ -1,0 +1,16 @@
+NODE_ENV=production
+PORT=10000
+JWT_SECRET=your-super-secure-32-character-key-here-change-this-immediately
+WEBKIOSK_URL=https://webkiosk.juet.ac.in
+WEBKIOSK_TIMEOUT=30000
+WEBKIOSK_RETRY_ATTEMPTS=3
+CORS_ORIGIN=*
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_WINDOW_MS=900000
+SYNC_INTERVAL_MINUTES=60
+CAPTCHA_SERVICE=tesseract
+PUPPETEER_HEADLESS=true
+PUPPETEER_NO_SANDBOX=true
+PUPPETEER_DISABLE_DEV_SHM_USAGE=true
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/juet-attendance
+REDIS_URL=redis://username:password@redis-server:port
