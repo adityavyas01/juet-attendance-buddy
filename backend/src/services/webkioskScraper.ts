@@ -91,19 +91,22 @@ export class WebKioskScraper {
       // Navigate to login page
       await this.page!.goto(this.loginUrl, { waitUntil: 'networkidle2' });
 
-      // Fill login form
-      await this.page!.type('input[name="enrollmentno"], input[name="txtInst"]', credentials.enrollmentNumber);
-      await this.page!.type('input[name="password"], input[name="txtPass"]', credentials.password);
-      await this.page!.type('input[name="dob"], input[name="txtdob"]', credentials.dateOfBirth);
+      // Select Student from dropdown
+      await this.page!.select('select[name="UserType"]', 'S');
 
-      // Solve captcha
-      const captchaText = await this.solveCaptcha();
-      await this.page!.type('input[name="txtcap"], input[name="captcha"]', captchaText);
+      // Fill login form with exact field names from WebKiosk
+      await this.page!.type('input[name="MemberCode"]', credentials.enrollmentNumber);
+      await this.page!.type('input[name="Password"]', credentials.password);
+      await this.page!.type('input[name="DATE1"]', credentials.dateOfBirth);
+
+      // Get and solve captcha (the captcha text is shown as "mikpq" in the form)
+      const captchaText = await this.page!.$eval('.noselect', el => el.textContent?.replace(/[^a-zA-Z0-9]/g, '') || '');
+      await this.page!.type('input[name="txtcap"]', captchaText);
 
       // Submit form
       await Promise.all([
         this.page!.waitForNavigation({ waitUntil: 'networkidle2' }),
-        this.page!.click('input[type="submit"], button[type="submit"]'),
+        this.page!.click('input[name="BTNSubmit"]'),
       ]);
 
       // Check if login was successful
@@ -114,15 +117,7 @@ export class WebKioskScraper {
         logger.info(`Login successful for ${credentials.enrollmentNumber}`);
         return true;
       } else {
-        // Check for error messages
-        const errorElement = await this.page!.$('.error, .alert-danger, .warning');
-        let errorMessage = 'Login failed';
-        
-        if (errorElement) {
-          errorMessage = await this.page!.evaluate(el => el.textContent || 'Login failed', errorElement);
-        }
-
-        logger.error(`Login failed for ${credentials.enrollmentNumber}: ${errorMessage}`);
+        logger.error(`Login failed for ${credentials.enrollmentNumber}`);
         return false;
       }
     } catch (error) {

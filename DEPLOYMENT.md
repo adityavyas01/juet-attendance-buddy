@@ -155,13 +155,9 @@ PUPPETEER_DISABLE_DEV_SHM_USAGE=true
 # Build for production
 npm run build
 
-# Android APK
+# Android APK (Only Platform Supported)
 npm run mobile:android
 # In Android Studio: Build > Generate Signed Bundle/APK
-
-# iOS App
-npm run mobile:ios  
-# In Xcode: Product > Archive > Distribute App
 ```
 
 ## 🚀 Automatic Backend Features
@@ -179,7 +175,7 @@ The cloud backend will automatically:
 ## 💡 Mobile App Features
 
 Your lightweight mobile app includes:
-- ✅ Native Android and iOS support
+- ✅ Native Android support (iOS removed for lightweight deployment)
 - ✅ Offline data caching
 - ✅ Secure authentication
 - ✅ Real-time sync with cloud backend

@@ -1,6 +1,6 @@
 NODE_ENV=production
 PORT=10000
-JWT_SECRET=your-super-secure-32-character-key-here-change-this-immediately
+JWT_SECRET=juet-attendance-super-secret-key-32-characters-minimum-length
 WEBKIOSK_URL=https://webkiosk.juet.ac.in
 WEBKIOSK_TIMEOUT=30000
 WEBKIOSK_RETRY_ATTEMPTS=3
@@ -12,5 +12,5 @@ CAPTCHA_SERVICE=tesseract
 PUPPETEER_HEADLESS=true
 PUPPETEER_NO_SANDBOX=true
 PUPPETEER_DISABLE_DEV_SHM_USAGE=true
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/juet-attendance
-REDIS_URL=redis://username:password@redis-server:port
+MONGODB_URI=mongodb+srv://adityavyas670:szuuKHOCTk24Eo1j@cluster0.zrbc8lc.mongodb.net/juet-attendance?retryWrites=true&w=majority&appName=Cluster0
+REDIS_URL=redis://default:comzBFaZzpULCfKlvtEqJCzpOEf4cGaS@redis-12006.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:12006

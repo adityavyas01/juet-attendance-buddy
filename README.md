@@ -1,29 +1,34 @@
-# JUET Attendance Buddy - Mobile App
+# JUET Attendance Buddy - Android Mobile App
 
-A production-ready mobile application for JUET students to track their attendance, view marks, and monitor academic progress through WebKiosk integration.
+**Ultra-lightweight Android app** for JUET University students to track attendance and academic performance.
 
-## 🚀 Features
+## 🎯 Project Overview
 
-- **Real-time Attendance Tracking**: Automatic sync with JUET WebKiosk
-- **Academic Performance**: View exam marks and SGPA/CGPA data
-- **Mobile-First Design**: Native mobile experience with Capacitor
-- **Offline Support**: Works offline with local data caching
-- **Cross-Platform**: Runs on Android and iOS
-- **Secure Authentication**: JWT-based authentication with secure storage
-- **Dark/Light Mode**: Adaptive UI themes
+### � Mobile App Features (Android Only)
+- ✅ Real-time attendance tracking via WebKiosk
+- ✅ SGPA/CGPA monitoring and visualization  
+- ✅ Exam marks and academic progress
+- ✅ Offline data caching for no-internet scenarios
+- ✅ Push notifications for attendance changes
+- ✅ Material Design UI with dark/light themes
+- ✅ Biometric authentication (fingerprint/face)
+- ✅ APK ready for Google Play Store
 
-## 📱 Mobile Development
+### ☁️ Backend (100% Cloud-Hosted)
+- **Live API**: https://juet-attendance-buddy.onrender.com/api
+- **Database**: MongoDB Atlas (cloud database)
+- **Cache**: Redis Cloud (session management)  
+- **WebKiosk Scraping**: Automatic every hour
+- **Hosting**: Render.com with auto-scaling
+- **Uptime**: 24/7 operation (even when your laptop is offline)
 
-This app is built with:
-- **React + TypeScript** for the UI
-- **Capacitor** for native mobile functionality
-- **Vite** for fast development and building
-- **Tailwind CSS + shadcn/ui** for styling
-- **Node.js + Express** backend with MongoDB
+## 🚀 Quick Start
 
-### Development Commands
+### Prerequisites
+- Node.js 18+
+- Android Studio (for APK building)
 
-#### Development
+### Development
 ```bash
 # Start web development server
 npm run dev

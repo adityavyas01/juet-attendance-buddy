@@ -7,7 +7,6 @@
 ### Base URLs:
 ```
 Primary: https://webkiosk.juet.ac.in
-Backup:  https://webkiosk2.juet.ac.in (if exists)
 ```
 
 ## 🔐 Required Authentication APIs
