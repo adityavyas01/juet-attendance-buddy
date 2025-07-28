@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.juet.attendancebuddy',
   appName: 'JUET Attendance Buddy',
-  webDir: 'dist',
+  webDir: 'build',
   server: {
     androidScheme: 'https'
   },

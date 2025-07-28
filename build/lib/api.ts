@@ -4,12 +4,32 @@ import { getStoredToken, setStoredToken, removeStoredToken } from './auth';
 // API configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://juet-attendance-buddy.onrender.com/api';
 
+console.log('=== API CONFIG DEBUG ===');
+console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('API_BASE_URL:', API_BASE_URL);
+console.log('========================');
+
 // API response types
 interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
+}
+
+// Login response type matching new backend
+interface LoginResponseData {
+  token: string;
+  user: {
+    enrollmentNumber: string;
+    name: string;
+    course: string;
+    branch: string;
+    semester: number;
+    dateOfBirth: string;
+  };
+  attendance: Subject[]; // WebKiosk attendance data
+  sgpa: SGPACGPAData[]; // WebKiosk SGPA data
 }
 
 // API client class
@@ -37,8 +57,18 @@ class ApiClient {
     };
 
     try {
+      console.log('=== API REQUEST DEBUG ===');
+      console.log('URL:', url);
+      console.log('Config:', config);
+      console.log('=========================');
+      
       const response = await fetch(url, config);
       const data = await response.json();
+
+      console.log('=== API RESPONSE DEBUG ===');
+      console.log('Status:', response.status);
+      console.log('Data:', data);
+      console.log('==========================');
 
       if (!response.ok) {
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
@@ -46,7 +76,9 @@ class ApiClient {
 
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('=== API ERROR DEBUG ===');
+      console.error('Error:', error);
+      console.error('=======================');
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
@@ -86,8 +118,8 @@ export const authApi = {
     enrollmentNumber: string;
     password: string;
     dateOfBirth: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> => {
-    const response = await apiClient.post<{ user: User; token: string }>('/auth/login', credentials);
+  }): Promise<ApiResponse<LoginResponseData>> => {
+    const response = await apiClient.post<LoginResponseData>('/auth/login', credentials);
     
     if (response.success && response.data?.token) {
       await setStoredToken(response.data.token);

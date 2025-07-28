@@ -153,6 +153,104 @@ router.post('/login', [
   res.json(response);
 }));
 
+// @desc    WebKiosk Login (Direct authentication with WebKiosk)
+// @route   POST /api/auth/webkiosk-login
+// @access  Public
+router.post('/webkiosk-login', [
+  body('enrollmentNumber')
+    .notEmpty()
+    .withMessage('Enrollment number is required'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required'),
+  body('dateOfBirth')
+    .notEmpty()
+    .withMessage('Date of birth is required'),
+], asyncHandler(async (req: express.Request, res: express.Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw createCustomError('Validation failed: ' + errors.array().map(e => e.msg).join(', '), 400);
+  }
+
+  const { enrollmentNumber, password, dateOfBirth } = req.body;
+
+  // Log raw input to debug conversion
+  logger.info(`Raw input - dateOfBirth: "${dateOfBirth}", type: ${typeof dateOfBirth}`);
+
+  try {
+    // Real WebKiosk authentication ONLY
+    logger.info(`Attempting real WebKiosk authentication for: ${enrollmentNumber}`);
+    
+    // Initialize WebKiosk scraper to verify credentials
+    const { WebKioskScraper } = await import('../services/webkioskScraper');
+    const scraper = new WebKioskScraper();
+    
+    try {
+      // Verify credentials by attempting to login to WebKiosk
+      const credentials = { enrollmentNumber, password, dateOfBirth };
+      const loginSuccess = await scraper.login(credentials);
+      
+      if (!loginSuccess) {
+        throw createCustomError('Invalid WebKiosk credentials', 401);
+      }
+
+      // Fetch student data from WebKiosk
+      const scrapedData = await scraper.scrapeAttendance();
+      const attendanceData = scrapedData.subjects || [];
+      const studentInfo = scrapedData.studentInfo || {};
+      
+      // Fetch SGPA/CGPA data
+      logger.info('Fetching SGPA/CGPA data...');
+      const sgpaData = await scraper.scrapeSGPACGPA();
+      logger.info(`Fetched SGPA data for ${sgpaData.length} semesters`);
+
+      // Always cleanup scraper
+      await scraper.cleanup();
+
+    // Log successful data scraping
+    logger.info(`Login successful - scraped ${attendanceData.length} subjects from WebKiosk`);
+
+    // Generate a simple token without database dependency
+    const token = generateToken({
+      id: enrollmentNumber, // Use enrollment as ID
+      enrollmentNumber: enrollmentNumber,
+      isAdmin: false,
+    });
+
+    logger.info(`Student logged in via WebKiosk: ${enrollmentNumber}`);
+
+    // Return scraped data directly - no database needed!
+    const response: ApiResponse = {
+      success: true,
+      message: `Login successful - Fetched ${attendanceData.length} subjects from WebKiosk`,
+      data: {
+        token,
+        user: {
+          enrollmentNumber: enrollmentNumber,
+          name: studentInfo?.name || 'Student',
+          course: studentInfo?.course || 'B.Tech',
+          branch: 'CSE',
+          semester: studentInfo?.currentSemester || 7,
+          dateOfBirth: dateOfBirth, // Use the original login DOB
+        },
+        attendance: attendanceData,
+        sgpa: sgpaData,
+      },
+      timestamp: new Date(),
+    };
+
+    res.json(response);
+    } catch (scraperError) {
+      // Ensure cleanup happens even if scraping fails
+      await scraper.cleanup();
+      throw scraperError;
+    }
+  } catch (error) {
+    logger.error('WebKiosk login error:', error);
+    throw createCustomError('Failed to authenticate with WebKiosk. Please check your credentials.', 401);
+  }
+}));
+
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private

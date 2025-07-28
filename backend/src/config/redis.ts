@@ -4,6 +4,12 @@ import { logger } from '../utils/logger';
 let redisClient: RedisClientType;
 
 export const connectRedis = async (): Promise<void> => {
+  // Redis is optional for development
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('🔴 Redis skipped in development mode');
+    return;
+  }
+  
   try {
     const redisURL = process.env.NODE_ENV === 'production' 
       ? process.env.REDIS_URL_PROD 
@@ -12,12 +18,13 @@ export const connectRedis = async (): Promise<void> => {
     redisClient = createClient({
       url: redisURL,
       socket: {
-        connectTimeout: 60000,
+        connectTimeout: 5000,
+        reconnectStrategy: false, // Disable reconnection attempts
       },
     });
 
     redisClient.on('error', (err: Error) => {
-      logger.error('Redis Client Error:', err);
+      logger.warn('Redis Client Error (Redis is optional):', err.message);
     });
 
     redisClient.on('connect', () => {

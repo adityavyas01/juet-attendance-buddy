@@ -19,6 +19,11 @@ dotenv.config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development' 
 });
 
+// Load environment variables
+dotenv.config({ 
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development' 
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -36,7 +41,7 @@ app.use(helmet({
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173'],
+  origin: true, // Allow all origins for mobile development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -112,6 +117,8 @@ async function startServer() {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📊 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🌐 CORS origins: ${corsOptions.origin}`);
+      logger.info(`🎯 WebKiosk integration: ENABLED`);
+      logger.info(`💾 Database: CONNECTED`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

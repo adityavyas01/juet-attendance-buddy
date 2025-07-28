@@ -1,7 +1,29 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IUser } from '../types';
 
-export interface UserDocument extends IUser, Document {}
+export interface UserDocument extends Document {
+  enrollmentNumber: string;
+  name: string;
+  course: string;
+  branch: string;
+  semester: number;
+  passwordHash: string;
+  dateOfBirth: string;
+  isActive: boolean;
+  lastLogin?: Date;
+  lastSync?: Date;
+  webkioskData?: {
+    attendance?: any[];
+    sgpa?: any[];
+    lastSync?: Date;
+  };
+  preferences: {
+    notifications: boolean;
+    backgroundSync: boolean;
+    theme: 'light' | 'dark' | 'auto';
+  };
+  toSafeObject(): Omit<UserDocument, 'passwordHash' | '__v'>;
+}
 
 const userSchema = new Schema<UserDocument>({
   enrollmentNumber: {
@@ -10,7 +32,7 @@ const userSchema = new Schema<UserDocument>({
     unique: true,
     trim: true,
     uppercase: true,
-    match: /^[0-9]{2}[A-Z][0-9]{3}$/,
+    match: /^[0-9]{2,3}[A-Z][0-9]{3}$/,
   },
   name: {
     type: String,
@@ -41,7 +63,12 @@ const userSchema = new Schema<UserDocument>({
   dateOfBirth: {
     type: String,
     required: true,
-    match: /^\d{4}-\d{2}-\d{2}$/,
+    validate: {
+      validator: function(v: string) {
+        return /^\d{2}-\d{2}-\d{4}$/.test(v);
+      },
+      message: 'Date of birth must be in DD-MM-YYYY format'
+    },
   },
   isActive: {
     type: Boolean,
@@ -52,6 +79,11 @@ const userSchema = new Schema<UserDocument>({
   },
   lastSync: {
     type: Date,
+  },
+  webkioskData: {
+    attendance: { type: Array, default: [] },
+    sgpa: { type: Array, default: [] },
+    lastSync: { type: Date },
   },
   preferences: {
     notifications: {

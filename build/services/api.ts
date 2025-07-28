@@ -90,10 +90,25 @@ export interface ApiResponse<T = any> {
   timestamp: string;
 }
 
+// Login response type matching backend
+export interface LoginResponseData {
+  token: string;
+  user: {
+    enrollmentNumber: string;
+    name: string;
+    course: string;
+    branch: string;
+    semester: number;
+    dateOfBirth: string;
+  };
+  attendance: any[]; // WebKiosk attendance data
+  sgpa: any[]; // WebKiosk SGPA data
+}
+
 // Auth API
 export const authApi = {
-  async login(credentials: { enrollmentNumber: string; password: string; dateOfBirth: string }): Promise<ApiResponse> {
-    const response = await apiClient.post<ApiResponse>('/auth/login', credentials);
+  async login(credentials: { enrollmentNumber: string; password: string; dateOfBirth: string }): Promise<ApiResponse<LoginResponseData>> {
+    const response = await apiClient.post<ApiResponse<LoginResponseData>>('/auth/login', credentials);
     if (response.success && response.data?.token) {
       apiClient.setToken(response.data.token);
     }
