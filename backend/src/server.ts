@@ -113,8 +113,10 @@ async function startServer() {
     startBackgroundJobs();
     
     // Start HTTP server
-    app.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
+    const port = Number(PORT);
+    app.listen(port, '0.0.0.0', () => {
+      logger.info(`🚀 Server running on port ${port}`);
+      logger.info(`📱 Network access: http://192.168.74.230:${port}`);
       logger.info(`📊 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🌐 CORS origins: ${corsOptions.origin}`);
       logger.info(`🎯 WebKiosk integration: ENABLED`);

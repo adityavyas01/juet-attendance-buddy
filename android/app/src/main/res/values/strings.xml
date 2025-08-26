@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">JUET Attendance Buddy</string>
-    <string name="title_activity_main">JUET Attendance Buddy</string>
-    <string name="package_name">com.juet.attendancebuddy</string>
-    <string name="custom_url_scheme">com.juet.attendancebuddy</string>
-</resources>
