@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "npx tsx src/server.ts",
+    "start": "node dist/server.js",
+    "prod": "npm run build && npm start",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "docker:build": "docker build -t juet-attendance-backend .",
@@ -24,13 +25,9 @@
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.4.0",
-    "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.2",
-    "puppeteer": "^21.11.0",
+    "puppeteer": "^24.17.1",
     "redis": "^4.6.7",
-    "sharp": "^0.32.4",
-    "tesseract.js": "^4.1.1",
-    "tsx": "^4.7.0",
     "winston": "^3.10.0"
   },
   "devDependencies": {

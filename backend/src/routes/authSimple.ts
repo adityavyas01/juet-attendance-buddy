@@ -12,7 +12,7 @@ const scraper = new WebKioskScraper();
 const generateToken = (payload: any): string => {
   return jwt.sign(payload, process.env.JWT_SECRET || 'default-secret', {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+  } as jwt.SignOptions);
 };
 
 // @desc    Login with WebKiosk

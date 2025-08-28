@@ -7,6 +7,7 @@ import { createCustomError, asyncHandler } from '../middleware/errorHandler';
 import { protect, AuthRequest } from '../middleware/auth';
 import { ApiResponse, JWTPayload } from '../types';
 import { logger } from '../utils/logger';
+import { encryptPassword, decryptPassword } from '../utils/encryption';
 
 const router = express.Router();
 
@@ -93,7 +94,7 @@ router.post('/register', [
   res.status(201).json(response);
 }));
 
-// @desc    Login user
+// @desc    WebKiosk Login with Credential Storage
 // @route   POST /api/auth/login
 // @access  Public
 router.post('/login', [
@@ -103,91 +104,83 @@ router.post('/login', [
   body('password')
     .notEmpty()
     .withMessage('Password is required'),
-], asyncHandler(async (req: express.Request, res: express.Response) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw createCustomError('Validation failed: ' + errors.array().map(e => e.msg).join(', '), 400);
-  }
-
-  const { enrollmentNumber, password } = req.body;
-
-  // Check if user exists
-  const user = await User.findOne({ enrollmentNumber });
-  if (!user) {
-    throw createCustomError('Invalid credentials', 401);
-  }
-
-  if (!user.isActive) {
-    throw createCustomError('Account is deactivated', 401);
-  }
-
-  // Check password
-  const isPasswordMatch = await bcrypt.compare(password, user.passwordHash);
-  if (!isPasswordMatch) {
-    throw createCustomError('Invalid credentials', 401);
-  }
-
-  // Update last login
-  user.lastLogin = new Date();
-  await user.save();
-
-  // Generate token
-  const token = generateToken({
-    id: user._id!.toString(),
-    enrollmentNumber: user.enrollmentNumber,
-    isAdmin: false,
-  });
-
-  logger.info(`User logged in: ${enrollmentNumber}`);
-
-  const response: ApiResponse = {
-    success: true,
-    message: 'Login successful',
-    data: {
-      token,
-      user: user.toSafeObject(),
-    },
-    timestamp: new Date(),
-  };
-
-  res.json(response);
-}));
-
-// @desc    WebKiosk Login (Direct authentication with WebKiosk)
-// @route   POST /api/auth/webkiosk-login
-// @access  Public
-router.post('/webkiosk-login', [
-  body('enrollmentNumber')
-    .notEmpty()
-    .withMessage('Enrollment number is required'),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required'),
   body('dateOfBirth')
+    .optional()
     .notEmpty()
     .withMessage('Date of birth is required'),
+  body('rememberCredentials')
+    .optional()
+    .isBoolean()
+    .withMessage('Remember credentials must be boolean'),
 ], asyncHandler(async (req: express.Request, res: express.Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     throw createCustomError('Validation failed: ' + errors.array().map(e => e.msg).join(', '), 400);
   }
 
-  const { enrollmentNumber, password, dateOfBirth } = req.body;
-
-  // Log raw input to debug conversion
-  logger.info(`Raw input - dateOfBirth: "${dateOfBirth}", type: ${typeof dateOfBirth}`);
+  const { enrollmentNumber, password, dateOfBirth, rememberCredentials = true } = req.body;
 
   try {
-    // Real WebKiosk authentication ONLY
-    logger.info(`Attempting real WebKiosk authentication for: ${enrollmentNumber}`);
+    // First check if user exists in database with stored credentials
+    let user = await User.findOne({ enrollmentNumber }).select('+webkioskCredentials');
+    let shouldCreateUser = false;
     
-    // Initialize WebKiosk scraper to verify credentials
+    // If user exists and has stored credentials, try using them first
+    if (user?.webkioskCredentials?.encryptedPassword && user?.webkioskCredentials?.autoLoginEnabled) {
+      try {
+        const storedPassword = decryptPassword(user.webkioskCredentials.encryptedPassword);
+        
+        // If provided password matches stored password, skip WebKiosk verification
+        if (storedPassword === password) {
+          logger.info(`Using stored credentials for: ${enrollmentNumber}`);
+          
+          // Check if credentials were validated recently (within 24 hours)
+          const lastValidated = user.webkioskCredentials.lastValidated;
+          const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          
+          if (lastValidated && lastValidated > twentyFourHoursAgo) {
+            // Use stored credentials without WebKiosk verification
+            const token = generateToken({
+              id: user._id!.toString(),
+              enrollmentNumber: user.enrollmentNumber,
+              isAdmin: false,
+            });
+
+            // Update last login
+            user.lastLogin = new Date();
+            await user.save();
+
+            logger.info(`Quick login successful for: ${enrollmentNumber}`);
+
+            const response: ApiResponse = {
+              success: true,
+              message: 'Login successful (using stored credentials)',
+              data: {
+                token,
+                user: user.toSafeObject(),
+                fromCache: true
+              },
+              timestamp: new Date(),
+            };
+
+            return res.json(response);
+          }
+        }
+      } catch (decryptError) {
+        logger.warn(`Failed to decrypt stored credentials for ${enrollmentNumber}:`, decryptError);
+        // Continue with WebKiosk verification
+      }
+    }
+
+    // Verify credentials with WebKiosk
+    logger.info(`Attempting WebKiosk authentication for: ${enrollmentNumber}`);
+    
     const { WebKioskScraper } = await import('../services/webkioskScraper');
     const scraper = new WebKioskScraper();
     
     try {
       // Verify credentials by attempting to login to WebKiosk
-      const credentials = { enrollmentNumber, password, dateOfBirth };
+      const credentials = { enrollmentNumber, password, dateOfBirth: dateOfBirth || '' };
       const loginSuccess = await scraper.login(credentials);
       
       if (!loginSuccess) {
@@ -207,39 +200,88 @@ router.post('/webkiosk-login', [
       // Always cleanup scraper
       await scraper.cleanup();
 
-    // Log successful data scraping
-    logger.info(`Login successful - scraped ${attendanceData.length} subjects from WebKiosk`);
-
-    // Generate a simple token without database dependency
-    const token = generateToken({
-      id: enrollmentNumber, // Use enrollment as ID
-      enrollmentNumber: enrollmentNumber,
-      isAdmin: false,
-    });
-
-    logger.info(`Student logged in via WebKiosk: ${enrollmentNumber}`);
-
-    // Return scraped data directly - no database needed!
-    const response: ApiResponse = {
-      success: true,
-      message: `Login successful - Fetched ${attendanceData.length} subjects from WebKiosk`,
-      data: {
-        token,
-        user: {
-          enrollmentNumber: enrollmentNumber,
+      // Create or update user with encrypted credentials
+      if (!user) {
+        // Create new user
+        user = new User({
+          enrollmentNumber,
           name: studentInfo?.name || 'Student',
           course: studentInfo?.course || 'B.Tech',
           branch: 'CSE',
           semester: studentInfo?.currentSemester || 7,
-          dateOfBirth: dateOfBirth, // Use the original login DOB
-        },
-        attendance: attendanceData,
-        sgpa: sgpaData,
-      },
-      timestamp: new Date(),
-    };
+          passwordHash: await bcrypt.hash(password, 10), // Hash for basic security
+          dateOfBirth: dateOfBirth || '',
+          webkioskData: {
+            attendance: attendanceData,
+            sgpa: sgpaData,
+            lastSync: new Date(),
+          },
+          preferences: {
+            rememberCredentials: rememberCredentials,
+            notifications: true,
+            backgroundSync: true,
+            theme: 'auto',
+          },
+        });
+      } else {
+        // Update existing user data
+        user.name = studentInfo?.name || user.name;
+        user.course = studentInfo?.course || user.course;
+        user.semester = studentInfo?.currentSemester || user.semester;
+        user.webkioskData = {
+          attendance: attendanceData,
+          sgpa: sgpaData,
+          lastSync: new Date(),
+        };
+        if (user.preferences) {
+          user.preferences.rememberCredentials = rememberCredentials;
+        }
+      }
 
-    res.json(response);
+      // Store encrypted credentials if user opted in
+      if (rememberCredentials) {
+        try {
+          const encryptedPassword = encryptPassword(password);
+          user.webkioskCredentials = {
+            encryptedPassword,
+            lastValidated: new Date(),
+            autoLoginEnabled: true,
+          };
+          logger.info(`Stored encrypted credentials for: ${enrollmentNumber}`);
+        } catch (encryptError) {
+          logger.error('Failed to encrypt credentials:', encryptError);
+          // Continue without storing credentials
+        }
+      }
+
+      // Update login time and save
+      user.lastLogin = new Date();
+      await user.save();
+
+      // Generate token
+      const token = generateToken({
+        id: user._id!.toString(),
+        enrollmentNumber: user.enrollmentNumber,
+        isAdmin: false,
+      });
+
+      logger.info(`Login successful - scraped ${attendanceData.length} subjects from WebKiosk`);
+
+      // Return success response
+      const response: ApiResponse = {
+        success: true,
+        message: `Login successful - Fetched ${attendanceData.length} subjects from WebKiosk`,
+        data: {
+          token,
+          user: user.toSafeObject(),
+          attendance: attendanceData,
+          sgpa: sgpaData,
+          credentialsStored: rememberCredentials,
+        },
+        timestamp: new Date(),
+      };
+
+      res.json(response);
     } catch (scraperError) {
       // Ensure cleanup happens even if scraping fails
       await scraper.cleanup();
@@ -250,6 +292,8 @@ router.post('/webkiosk-login', [
     throw createCustomError('Failed to authenticate with WebKiosk. Please check your credentials.', 401);
   }
 }));
+
+// Remove duplicate WebKiosk login route since we've integrated it into the main login
 
 // @desc    Get current user
 // @route   GET /api/auth/me
@@ -372,6 +416,145 @@ router.put('/password', protect, [
   };
 
   res.json(response);
+}));
+
+// @desc    Auto login using stored credentials
+// @route   POST /api/auth/auto-login
+// @access  Public
+router.post('/auto-login', [
+  body('enrollmentNumber')
+    .notEmpty()
+    .withMessage('Enrollment number is required'),
+], asyncHandler(async (req: express.Request, res: express.Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    throw createCustomError('Validation failed: ' + errors.array().map(e => e.msg).join(', '), 400);
+  }
+
+  const { enrollmentNumber } = req.body;
+
+  try {
+    // Find user with stored credentials
+    const user = await User.findOne({ 
+      enrollmentNumber,
+      'webkioskCredentials.autoLoginEnabled': true 
+    }).select('+webkioskCredentials');
+    
+    if (!user || !user.webkioskCredentials?.encryptedPassword) {
+      throw createCustomError('No stored credentials found for this user', 404);
+    }
+
+    // Check if credentials were validated recently (within 24 hours)
+    const lastValidated = user.webkioskCredentials.lastValidated;
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    if (!lastValidated || lastValidated <= twentyFourHoursAgo) {
+      // Credentials need to be re-validated with WebKiosk
+      try {
+        const storedPassword = decryptPassword(user.webkioskCredentials.encryptedPassword);
+        
+        logger.info(`Re-validating stored credentials for: ${enrollmentNumber}`);
+        
+        const { WebKioskScraper } = await import('../services/webkioskScraper');
+        const scraper = new WebKioskScraper();
+        
+        try {
+          const credentials = { 
+            enrollmentNumber, 
+            password: storedPassword, 
+            dateOfBirth: user.dateOfBirth || '' 
+          };
+          const loginSuccess = await scraper.login(credentials);
+          
+          if (!loginSuccess) {
+            // Stored credentials are invalid, remove them
+            user.webkioskCredentials.autoLoginEnabled = false;
+            await user.save();
+            throw createCustomError('Stored credentials are no longer valid. Please login again.', 401);
+          }
+
+          // Update validation timestamp
+          user.webkioskCredentials.lastValidated = new Date();
+          await scraper.cleanup();
+          
+        } catch (scraperError) {
+          await scraper.cleanup();
+          throw scraperError;
+        }
+      } catch (decryptError) {
+        logger.error(`Failed to decrypt credentials for ${enrollmentNumber}:`, decryptError);
+        throw createCustomError('Failed to decrypt stored credentials. Please login again.', 401);
+      }
+    }
+
+    // Generate token
+    const token = generateToken({
+      id: user._id!.toString(),
+      enrollmentNumber: user.enrollmentNumber,
+      isAdmin: false,
+    });
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    logger.info(`Auto-login successful for: ${enrollmentNumber}`);
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Auto-login successful',
+      data: {
+        token,
+        user: user.toSafeObject(),
+        autoLogin: true,
+        credentialsValidated: lastValidated && lastValidated > twentyFourHoursAgo ? 'cached' : 'revalidated'
+      },
+      timestamp: new Date(),
+    };
+
+    res.json(response);
+  } catch (error) {
+    logger.error('Auto-login error:', error);
+    throw error;
+  }
+}));
+
+// @desc    Disable auto-login for user
+// @route   POST /api/auth/disable-auto-login
+// @access  Private
+router.post('/disable-auto-login', protect, asyncHandler(async (req: AuthRequest, res: express.Response) => {
+  try {
+    const user = await User.findById(req.user!.id).select('+webkioskCredentials');
+    
+    if (!user) {
+      throw createCustomError('User not found', 404);
+    }
+
+    // Disable auto-login and clear stored credentials
+    if (user.webkioskCredentials) {
+      user.webkioskCredentials.autoLoginEnabled = false;
+      user.webkioskCredentials.encryptedPassword = undefined as any;
+    }
+    
+    if (user.preferences) {
+      user.preferences.rememberCredentials = false;
+    }
+
+    await user.save();
+
+    logger.info(`Auto-login disabled for: ${user.enrollmentNumber}`);
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Auto-login disabled successfully',
+      timestamp: new Date(),
+    };
+
+    res.json(response);
+  } catch (error) {
+    logger.error('Disable auto-login error:', error);
+    throw error;
+  }
 }));
 
 export { router as authRoutes };

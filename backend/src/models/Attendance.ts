@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IAttendanceRecord } from '../types';
 
-export interface AttendanceDocument extends IAttendanceRecord, Document {}
+export interface AttendanceDocument extends Omit<IAttendanceRecord, '_id'>, Document {}
 
 const attendanceDataSchema = new Schema({
   lectures: {

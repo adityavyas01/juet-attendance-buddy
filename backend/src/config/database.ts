@@ -3,9 +3,9 @@ import { logger } from '../utils/logger';
 
 export const connectDB = async (): Promise<void> => {
   try {
-    const mongoURI = process.env.NODE_ENV === 'production' 
-      ? (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI || 'mongodb://localhost:27017/juet_attendance')
-      : (process.env.MONGODB_URI || 'mongodb://localhost:27017/juet_attendance');
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/juet_attendance';
+    
+    console.log('🔍 Attempting to connect to MongoDB URI:', mongoURI.replace(/\/\/([^:]+):([^@]+)@/, '//*****:*****@'));
 
     const conn = await mongoose.connect(mongoURI, {
       maxPoolSize: 10,

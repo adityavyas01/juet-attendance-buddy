@@ -15,14 +15,7 @@ import { syncRoutes } from './routes/sync';
 import { startBackgroundJobs } from './services/backgroundJobs';
 
 // Load environment variables
-dotenv.config({ 
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development' 
-});
-
-// Load environment variables
-dotenv.config({ 
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development' 
-});
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

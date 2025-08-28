@@ -4,16 +4,14 @@ import { logger } from '../utils/logger';
 let redisClient: RedisClientType;
 
 export const connectRedis = async (): Promise<void> => {
-  // Redis is optional for development
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info('🔴 Redis skipped in development mode');
+  // Skip Redis if no URL is provided
+  if (!process.env.REDIS_URL) {
+    logger.info('🔴 Redis skipped - no REDIS_URL configured');
     return;
   }
   
   try {
-    const redisURL = process.env.NODE_ENV === 'production' 
-      ? process.env.REDIS_URL_PROD 
-      : process.env.REDIS_URL || 'redis://localhost:6379';
+    const redisURL = process.env.REDIS_URL;
 
     redisClient = createClient({
       url: redisURL,
@@ -42,10 +40,8 @@ export const connectRedis = async (): Promise<void> => {
     await redisClient.connect();
   } catch (error) {
     logger.error('Redis connection failed:', error);
-    // Don't exit process for Redis failure in development
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
+    // Redis is optional - don't exit process on failure
+    logger.info('🔴 Continuing without Redis (optional service)');
   }
 };
 

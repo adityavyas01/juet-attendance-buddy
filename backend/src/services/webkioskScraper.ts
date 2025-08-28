@@ -71,7 +71,7 @@ export class WebKioskScraper {
         await this.page!.goto(this.baseUrl, { waitUntil: 'networkidle2' });
         
         // Wait a bit
-        await this.page!.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         currentUrl = this.page!.url();
         pageTitle = await this.page!.title();
@@ -120,7 +120,7 @@ export class WebKioskScraper {
       logger.info('Selected Student user type');
 
       // Wait for any dynamic changes
-      await this.page!.waitForTimeout(500);
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Fill enrollment number
       await this.page!.type('input[name="MemberCode"]', credentials.enrollmentNumber);
@@ -311,7 +311,7 @@ export class WebKioskScraper {
       logger.info(`Navigated to attendance page: ${attendanceUrl}`);
 
       // Wait for the page to load
-      await this.page.waitForTimeout(3000);
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Check the current URL and page content
       const currentUrl = this.page.url();
@@ -509,7 +509,7 @@ export class WebKioskScraper {
       logger.info(`Navigated to exam marks page: ${examMarksUrl}`);
 
       // Wait for the page to load
-      await this.page.waitForTimeout(3000);
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Check the current URL and page content
       const currentUrl = this.page.url();
@@ -522,7 +522,7 @@ export class WebKioskScraper {
         if (examDropdown) {
           await this.page.select('select[name="exam"]', '2025EVESEM');
           await this.page.click('input[type="submit"][value="Show"]');
-          await this.page.waitForTimeout(3000);
+          await new Promise(resolve => setTimeout(resolve, 3000));
           logger.info('Selected 2025EVESEM exam and submitted');
         }
       } catch (dropdownError) {
@@ -631,7 +631,7 @@ export class WebKioskScraper {
       logger.info(`Navigated to SGPA/CGPA page: ${sgpaUrl}`);
 
       // Wait for the page to load
-      await this.page.waitForTimeout(3000);
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Check the current URL and page content
       const currentUrl = this.page.url();

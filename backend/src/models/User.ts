@@ -9,6 +9,12 @@ export interface UserDocument extends Document {
   semester: number;
   passwordHash: string;
   dateOfBirth: string;
+  // Encrypted WebKiosk credentials for auto-login
+  webkioskCredentials?: {
+    encryptedPassword: string;
+    lastValidated?: Date;
+    autoLoginEnabled: boolean;
+  };
   isActive: boolean;
   lastLogin?: Date;
   lastSync?: Date;
@@ -21,8 +27,9 @@ export interface UserDocument extends Document {
     notifications: boolean;
     backgroundSync: boolean;
     theme: 'light' | 'dark' | 'auto';
+    rememberCredentials: boolean;
   };
-  toSafeObject(): Omit<UserDocument, 'passwordHash' | '__v'>;
+  toSafeObject(): Omit<UserDocument, 'passwordHash' | 'webkioskCredentials' | '__v'>;
 }
 
 const userSchema = new Schema<UserDocument>({
@@ -70,6 +77,20 @@ const userSchema = new Schema<UserDocument>({
       message: 'Date of birth must be in DD-MM-YYYY format'
     },
   },
+  // Encrypted WebKiosk credentials for seamless login
+  webkioskCredentials: {
+    encryptedPassword: {
+      type: String,
+      select: false, // Don't include in regular queries for security
+    },
+    lastValidated: {
+      type: Date,
+    },
+    autoLoginEnabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
   isActive: {
     type: Boolean,
     default: true,
@@ -99,12 +120,17 @@ const userSchema = new Schema<UserDocument>({
       enum: ['light', 'dark', 'auto'],
       default: 'auto',
     },
+    rememberCredentials: {
+      type: Boolean,
+      default: true,
+    },
   },
 }, {
   timestamps: true,
   toJSON: {
     transform: function(doc, ret) {
       delete ret.passwordHash;
+      delete ret.webkioskCredentials; // Never include encrypted credentials in JSON
       delete ret.__v;
       return ret;
     },
