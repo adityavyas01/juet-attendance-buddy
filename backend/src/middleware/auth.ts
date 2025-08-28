@@ -27,22 +27,12 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
 
-      // Get user from token
-      const user = await User.findById(decoded.id).select('-passwordHash');
-
-      if (!user) {
-        throw createCustomError('No user found with this token', 401);
-      }
-
-      if (!user.isActive) {
-        throw createCustomError('User account is deactivated', 401);
-      }
-
-      // Add user to request object
+      // For WebKiosk-only auth, we don't need database lookup
+      // The token already contains the user information
       req.user = {
-        id: user._id!.toString(),
-        enrollmentNumber: user.enrollmentNumber,
-        isAdmin: false, // Will be set in admin middleware
+        id: decoded.id,
+        enrollmentNumber: decoded.enrollmentNumber,
+        isAdmin: decoded.isAdmin || false,
       };
 
       next();

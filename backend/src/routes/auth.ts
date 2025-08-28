@@ -12,9 +12,9 @@ const router = express.Router();
 
 // Generate JWT Token
 const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+  const secret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
 };
 
 // @desc    Register user
